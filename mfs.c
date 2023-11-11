@@ -36,68 +36,13 @@ int MFS_Init(char *hostname, int port)
     int receive = UDP_FillSockAddr(&serverAddr, hostname, port);
     tv.tv_sec = 3;
     tv.tv_usec = 0;
-/*
-    FD_ZERO(&fs);
-    FD_SET(sd, &fs);
-  
-    msg_t message;
-    message.msgType = 0;
-    printf("CLIENT :: Connecting to the server...\n");
- */ 
+
     while(receive < 0)
     {
         receive = UDP_FillSockAddr(&serverAddr, hostname, port);
     }
 
 
-
-    //receive =  UDP_Write(sd, &serverAddr, &message, sizeof(msg_t));
-
-   /* while(receive < 0 )
-    {
-        receive =  UDP_Write(sd, &serverAddr, &message, sizeof(msg_t));
-    }
-
-
-
-    msg_t rcMsg;
-    //printf("sent for the first time \n");
-
-    while(1)
-    {
-        fd_set temp = fs;
-
-        int val = select(sd+1, &temp, NULL, NULL,&tv);
-
-        if(val == 0)
-        {
-            printf("INIT Again\n");
-            tv.tv_sec = 3;
-            UDP_Write(sd, &serverAddr, &message, sizeof(msg_t));
-
-        }else if(val < 0) return -1;
-        else break;
-    }
-
-*/
-/*
-    printf("CLIENT :: Waiting for the server to respond...\n");
-    receive = UDP_Read(sd, &senderAddr, &rcMsg, sizeof(msg_t));
-
-    if(receive < 0)
-    {
-        printf("CLIENT :: receive MSG FAILED");
-        return -1;
-    }
-
-
-    if(rcMsg.inumber != 666)
-    {
-        perror("Server Connection FAILED\n");
-       // perror("receiveD RESULT %d\n", rcMsg.inumber);
-        return -1;
-    } else printf("CLIENT :: Successfully Connected to the Server\n");
-*/
     return 0;
 
 }
@@ -144,6 +89,8 @@ int MFS_Lookup(int pinum, char *name)
     return rcMsg.inumber;
 
 }
+
+
 int MFS_Stat(int inum, MFS_Stat_t *m)
 {
     printf("CLIENT :: STAT\n");
@@ -179,6 +126,8 @@ int MFS_Stat(int inum, MFS_Stat_t *m)
     return rcMsg.inumber;
 
 }
+
+
 int MFS_Write(int inum, char *buffer, int offset, int nbytes)
 {
     printf("CLIENT :: WRITE\n");
@@ -214,6 +163,8 @@ int MFS_Write(int inum, char *buffer, int offset, int nbytes)
 
     return rcMsg.inumber;
 }
+
+
 int MFS_Read(int inum, char *buffer, int offset, int nbytes)
 {
     printf("CLIENT :: READ\n");
@@ -249,6 +200,8 @@ int MFS_Read(int inum, char *buffer, int offset, int nbytes)
     memcpy(buffer, rcMsg.buffer, nbytes);
     return 0;
 }
+
+
 int MFS_Creat(int pinum, int type, char *name)
 {
     printf("CLIENT :: CREAT\n");
@@ -340,16 +293,6 @@ int MFS_Shutdown()
         printf("CLIENT :: SENDING MSG FAILED");
         return -1;
     }
-
-
-
-
-   // receive = UDP_Read(sd, &senderAddr, &rcMsg, sizeof(msg_t));
-    //if(receive < 0)
-    //{
-      //  printf("CLIENT :: Receiving MSG FAILED");
-       // return -1;
-    //}
 
     UDP_Close(closesd);
     

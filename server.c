@@ -50,7 +50,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     printf("inode 1:  %d\n",  checkBit(inodeBitMap, 1));
-    //printBitMap(inodeBitMap, 4);
     lseek(fd, (superBlock.data_bitmap_addr) * UFS_BLOCK_SIZE, SEEK_SET);
 
     if(-1 == read(fd, dataBitMap, superBlock.data_bitmap_len * UFS_BLOCK_SIZE) )   //read the dataBitMap
@@ -98,11 +97,8 @@ int main(int argc, char *argv[]) {
 
         printf("server:: receive a command\n");
         msg_t response;
-       /* if(message.msgType == 0)    //just make sure its connected (init)
-        {
-            //response.msgType = 0;
-            //status = 666;
-        }else*/ if(message.msgType == 1){ //return inode number of name
+        
+        if(message.msgType == 1){ //return inode number of name
             status = server_LookUp(fd, message.inumber, inodeBitMap, dataBitMap, inodeTable, message.buffer);
         }else if (message.msgType == 2){    //stat
             status =  server_Stat(fd, message.inumber, inodeBitMap, dataBitMap, inodeTable, (MFS_Stat_t*) response.buffer);
@@ -159,7 +155,6 @@ int server_LookUp(int fd, int pinum, bitmap_t* inodeBitMap, bitmap_t* dataBitMap
                 for(int j = 0; j < 128; j++)
                 {
                     if( 0 == strcmp(dirBlock.entries[j].name, buffer)) return dirBlock.entries[j].inum; //found
-                   // printf("entry name > %s\n", dirBlock.entries[j].name);
                 }
             } 
 
@@ -189,26 +184,22 @@ int server_Write(int fd, int inumber, bitmap_t* inodeBitMap, bitmap_t* dataBitMa
 {
             int row = inumber / 32;
             int rowIndex = inumber % 32;
-           // printf("pre\n");
             printf("type: row-%d id-%d   --> type-%d\n", row, rowIndex, inodeTable[row].inodes[rowIndex].type);
             if(inumber < 0 || inumber >= superBlock.num_inodes || checkBit(inodeBitMap, inumber) == 0|| inodeTable[row].inodes[rowIndex].type == 0) return -1;
 
             int fileSize = inodeTable[row].inodes[rowIndex].size;
-            //printf("prepre\n");
 
             if(offSet < 0 || offSet > fileSize || offSet + byteSize > 30 * UFS_BLOCK_SIZE || byteSize < 0 || byteSize > UFS_BLOCK_SIZE) return -1;
 
     
             int ptrNum = offSet / UFS_BLOCK_SIZE;
             int blockOffset = offSet % UFS_BLOCK_SIZE;
-            //printf("a\n");
 
             int blockNumber = inodeTable[row].inodes[rowIndex].direct[ptrNum];
 
             if(inodeTable[row].inodes[rowIndex].direct[ptrNum] == -1 )  //need to allocate a new block
             {
                 blockNumber = allocateBlock(dataBitMap, 1);    //allocate a new data block
-              //  printf("b\n");
                 if(blockNumber == -1) return -1;
 
                 blockNumber += superBlock.data_region_addr; //plus the offset
@@ -229,7 +220,6 @@ int server_Write(int fd, int inumber, bitmap_t* inodeBitMap, bitmap_t* dataBitMa
                 if(inodeTable[row].inodes[rowIndex].direct[ptrNum+1] == -1) //need to allocate a new data block
                 {
                     int newBlock = allocateBlock(dataBitMap, 1);
-                    //printf("c\n");
                     if(newBlock == -1) return -1;
 
                     inodeTable[row].inodes[rowIndex].direct[ptrNum+1] = newBlock;
@@ -241,9 +231,6 @@ int server_Write(int fd, int inumber, bitmap_t* inodeBitMap, bitmap_t* dataBitMa
             
 
             if(offSet + byteSize > fileSize) inodeTable[row].inodes[rowIndex].size = offSet + byteSize;
-            //printf("d\n");
-           // if( -1 == sync_OnDiskStructures(fd, inodeBitMap, dataBitMap, inodeTable) ) return -1;
-            //printf("e\n");
 
 
             //update the inodeTable to disk
@@ -259,7 +246,6 @@ int server_Write(int fd, int inumber, bitmap_t* inodeBitMap, bitmap_t* dataBitMa
 int server_Read(int fd, int inumber, bitmap_t* inodeBitMap, bitmap_t* dataBitMap, inode_block* inodeTable, char* buffer, int offSet, int byteSize)
 {
 
-           // printf("a\n");
             if(inumber < 0 || inumber >= superBlock.num_inodes || checkBit(inodeBitMap, inumber) == 0 ) return -1;
 
             int row = inumber/32;
@@ -271,10 +257,8 @@ int server_Read(int fd, int inumber, bitmap_t* inodeBitMap, bitmap_t* dataBitMap
             int ptrNum = offSet / UFS_BLOCK_SIZE;
             int blockOffset = offSet % UFS_BLOCK_SIZE;
             
-            //printf("b\n");
             if(offSet < 0 || offSet > fileSize || offSet + byteSize > 30 * UFS_BLOCK_SIZE || inodeTable[row].inodes[rowIndex].direct[ptrNum] == -1 || byteSize < 0 || byteSize > UFS_BLOCK_SIZE) return -1;
 
-                //printf("c\n");
             if(fileType == 0 && (offSet % sizeof(MFS_DirEnt_t) != 0 || byteSize % sizeof(MFS_DirEnt_t) != 0)) return -1;    //failure case: invalid read for directory
 
             
@@ -343,7 +327,6 @@ int server_Create(int fd, int pinum, bitmap_t* inodeBitmap, bitmap_t* dataBitMap
             //###>>> following codes are for creating a new file <<<###
 
             //find an inode for the new file
-            //printBitMap(inodeBitmap, 4);
             int newInode = findSpace(inodeBitmap, 0);
             printf("new Inode ->%d\n", newInode);
 
@@ -351,7 +334,6 @@ int server_Create(int fd, int pinum, bitmap_t* inodeBitmap, bitmap_t* dataBitMap
             setBit(inodeBitmap, 1, newInode, 0);
             
             int created = 0;
-            //printf("c\n");
             for(int i = 0 ; i < DIRECT_PTRS; i++)   //update directory entry
             {
                 unsigned int blockNum = inodeTable[row].inodes[rowIndex].direct[i];
@@ -413,7 +395,6 @@ int server_Create(int fd, int pinum, bitmap_t* inodeBitmap, bitmap_t* dataBitMap
             {
                 //find a datablock for directory entry block
                 int dirEntryBlock = allocateBlock(dataBitMap, 1);
-             //   printf("d");
                 if(dirEntryBlock == -1) return -1;  //failure case: does not have space for dirEnt block
                 inodeTable[newInode/32].inodes[newInode % 32].direct[0] = dirEntryBlock + superBlock.data_region_addr;
 
@@ -445,7 +426,6 @@ int server_Create(int fd, int pinum, bitmap_t* inodeBitmap, bitmap_t* dataBitMap
                 write(fd, &inodeTable[newInode/32].inodes[newInode % 32], sizeof(inode_t));
 
             }
-           // printf("e");
             //if( -1 == sync_OnDiskStructures(fd, inodeBitmap, dataBitMap, inodeTable) ) return -1;
 
 
@@ -533,7 +513,6 @@ int server_Unlink(int fd, int inumber, bitmap_t* inodeBitmap, bitmap_t* dataBitM
         
     }
 
-    //if( -1 == sync_OnDiskStructures(fd, inodeBitmap, dataBitMap, inodeTable) ) return -1;
     return fsync(fd);   //flush to the disk
 }
 
@@ -568,10 +547,8 @@ int findSpace(bitmap_t* bitmap, int mapVersion)  //return block number, if no sp
     int length = mapVersion == 0 ? superBlock.num_inodes : superBlock.num_data;
     int numPerBlock  = mapVersion == 0 ? 32: 1;
     length *= numPerBlock; 
-    //printf("bitmap length: %d\n", length);
     for(int i = 0 ; i < length; i++)
     {
-        //printf("find for bit: %d\n", i);
         if(checkBit(bitmap, i) == 0) return i;
 
     }
@@ -629,10 +606,7 @@ int checkBit(bitmap_t* bitmap, int blockNumber)
     rowNumber = rowNumber % 1024;
 
     unsigned int originalVal = bitmap[bitBlockNumber].bits[rowNumber];
-    //printf("row %d: %u\n", rowNumber, originalVal);
-    //unsigned int bitMask = 1;
 
-    //bitMask = bitMask << (31 - rowIndex);
     return (originalVal >> (31- rowIndex)) & 0x1;
 }
 
